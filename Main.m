@@ -287,53 +287,53 @@ range_tx1rx1_max_abs = squeeze(abs(max(range_tx1rx1_complete,[],2)));
 
 
  %% After all frames are processed, compute the spectrogram for the concatenated signal
-    % if ~isempty(slow_time_signal_all_frames)
-    iq_data = abs(slow_time_signal_all_frames); % Convert to magnitude
-    
-    % Ensure FFT size is a power of 2 for efficiency
-    nfft_stft = 2^nextpow2(length(iq_data(:))); % Now iq_data is defined!
-    
-    % Compute spectrogram
-    [S, F, T, P] = spectrogram(iq_data, kaiser(window_length, 3), overlap, nfft_stft, 1/PRT, 'yaxis');
-    
-    % Shift zero-frequency component to center
-    F = fftshift(F);
-    P = fftshift(P, 1); % Shift along the frequency dimension
-    
-    G = max(P);
-    psd= 20*log10(abs(P)/max(G));
-    % Plot results
-    
-    
-    max_slider_index = length(T) - window_length; % Max slider position
-    
-    %% -------PLOT SPECTROGRAM--------
-    figure(1); clf; % Clear figure for real-time update
-    subplot(2,1,1);
-    surf(T, F, 20*log10(abs(P)/max(G)), 'EdgeColor', 'none');
-    axis tight;
-    view(0, 90);
-    colorbar;
-    colormap(jet); % Change to a different colormap
-    ylim([0 200]);
-    clim([-40 0]);
-    xlabel('Time (s)');
-    ylabel('Frequency (Hz)');
-    title(['All Frames - Time-Frequency Spectrogram']);
+% if ~isempty(slow_time_signal_all_frames)
+iq_data = abs(slow_time_signal_all_frames); % Convert to magnitude
 
-    
-    %% ---- APPLY LOGARITHMIC FREQUENCY SCALING ----
-    % Define new frequency scale (logarithmic)
-    MAX_FREQ_BINS = 1024;  % Keep output bins manageable
-    MIN_FREQ = min(F(F > 0)); % Avoid log(0)
-    MAX_FREQ = max(F);
-    log_freq_bins = logspace(log10(MIN_FREQ), log10(MAX_FREQ), MAX_FREQ_BINS);
-    
-    % Interpolate intensity values onto log frequency scale
-    interp_intensity = interp1(F, psd, log_freq_bins, 'linear', 'extrap');
+% Ensure FFT size is a power of 2 for efficiency
+nfft_stft = 2^nextpow2(length(iq_data(:))); % Now iq_data is defined!
+
+% Compute spectrogram
+[S, F, T, P] = spectrogram(iq_data, kaiser(window_length, 3), overlap, nfft_stft, 1/PRT, 'yaxis');
+
+% Shift zero-frequency component to center
+F = fftshift(F);
+P = fftshift(P, 1); % Shift along the frequency dimension
+
+G = max(P);
+psd= 20*log10(abs(P)/max(G));
+% Plot results
 
 
+max_slider_index = length(T) - window_length; % Max slider position
 
+%% -------PLOT SPECTROGRAM--------
+figure(1); clf; % Clear figure for real-time update
+subplot(2,1,1);
+surf(T, F, 20*log10(abs(P)/max(G)), 'EdgeColor', 'none');
+axis tight;
+view(0, 90);
+colorbar;
+colormap(jet); % Change to a different colormap
+ylim([0 200]);
+clim([-40 0]);
+xlabel('Time (s)');
+ylabel('Frequency (Hz)');
+title(['All Frames - Time-Frequency Spectrogram']);
+
+
+%% ---- APPLY LOGARITHMIC FREQUENCY SCALING ----
+% Define new frequency scale (logarithmic)
+MAX_FREQ_BINS = 1024;  % Keep output bins manageable
+MIN_FREQ = min(F(F > 0)); % Avoid log(0)
+MAX_FREQ = max(F);
+log_freq_bins = logspace(log10(MIN_FREQ), log10(MAX_FREQ), MAX_FREQ_BINS);
+
+% Interpolate intensity values onto log frequency scale
+interp_intensity = interp1(F, psd, log_freq_bins, 'linear', 'extrap');
+
+
+%% -----PLOTTING RANGE FFT--------
 %%% Plot range FFT amplitude heatmap
 % This figure illustrates the distance information of the target(s) over
 % all frames within the pre-defined minimum and maximum ranges. The
@@ -342,7 +342,6 @@ range_tx1rx1_max_abs = squeeze(abs(max(range_tx1rx1_complete,[],2)));
 % human target is radially departing from 1m to 4m, turning around, and
 % approaching radially back to 1m.
 figure;
-%%-----PLOTTING RANGE FFT--------
 % Compute time axis based on frame duration
 time_axis = (0:frame_count-1) * 0.15; % Convert frames to time in seconds
 
@@ -360,11 +359,7 @@ colorbar; % Add a colorbar for better visualization
 
 
 
-
-
-
-
-%%% Plot the target detection results (amplitude, range, speed)
+%% ------Plot the target detection results (amplitude, range, speed)-------
 % This figure illustrates the target information in three subplots:
 %    1) Range FFT amplitude depictes the signal strength of the reflected
 %       wave from the target and is dependent on the RCS and the distance
@@ -384,7 +379,7 @@ colorbar; % Add a colorbar for better visualization
 %       Doppler_threshold, the speed is set to zero. This does not
 %       influence the target detection, but can be used in tracking
 %       algorithms to extinguish static targets.
-figure(1);
+figure(3);
 leg = [];
 
 for i = 1:max_num_targets
@@ -392,45 +387,48 @@ for i = 1:max_num_targets
 
     subplot(3,1,1);
     hold on;
-    plot(target_measurements.strength(:,i));
+    plot(time_axis, target_measurements.strength(:,i)); % X-axis now in seconds
 
     subplot(3,1,2);
     hold on;
-    plot(target_measurements.range(:,i));
+    plot(time_axis, target_measurements.range(:,i)); % X-axis now in seconds
 
     subplot(3,1,3);
     hold on;
-    plot(target_measurements.speed(:,i));
+    plot(time_axis, target_measurements.speed(:,i)); % X-axis now in seconds
 end
 
 ax1 = subplot(3,1,1);
-plot([0,frame_count],[range_threshold,range_threshold],'k');
-title(['FFT Amplitude - Filename: ', fdata]); % Include the file name
-xlabel('Frames');
+plot([0, time_axis(end)], [range_threshold, range_threshold], 'k');
+title(['FFT Amplitude - Filename: ', filename]); % Include the file name
+xlabel('Time (s)'); % Change from Frames to Time (Seconds)
 ylabel('Amplitude');
 leg_range = [leg; 'Range TH'];
-legend(leg_range,'Location','EastOutside');
+legend(leg_range, 'Location', 'EastOutside');
 
 ax2 = subplot(3,1,2);
-title(['Range - Filename: ', fdata]); % Include the file name
-xlabel('Frames');
+title(['Range - Filename: ', filename]); % Include the file name
+xlabel('Time (s)'); % Change from Frames to Time (Seconds)
 ylabel('Range (m)');
-legend(leg,'Location','EastOutside');
+legend(leg, 'Location', 'EastOutside');
 
 ax3 = subplot(3,1,3);
-title(['Speed - Filename: ', fdata]); % Include the file name
-xlabel('Frames')
+title(['Speed - Filename: ', filename]); % Include the file name
+xlabel('Time (s)'); % Change from Frames to Time (Seconds)
 ylabel('Speed (m/s)');
-legend(leg,'Location','EastOutside');
+legend(leg, 'Location', 'EastOutside');
 
-linkaxes([ax1,ax2,ax3],'x')
+linkaxes([ax1, ax2, ax3], 'x'); % Sync x-axes
+    
 
+
+%% -------PLOT FFT----------------
 fr_idx = 41;
 Rspectrum = abs(range_tx1rx1_complete(:,:));
 
-figure(2)
+figure(4)
 plot(Rspectrum)
-title(['Range Spectrum - Filename: ', fdata]); % Include the file name
+title(['Range Spectrum - Filename: ', filename]); % Include the file name
 
 
 

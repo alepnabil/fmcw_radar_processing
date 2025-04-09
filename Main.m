@@ -342,13 +342,22 @@ range_tx1rx1_max_abs = squeeze(abs(max(range_tx1rx1_complete,[],2)));
 % human target is radially departing from 1m to 4m, turning around, and
 % approaching radially back to 1m.
 figure;
+%%-----PLOTTING RANGE FFT--------
+% Compute time axis based on frame duration
+time_axis = (0:frame_count-1) * 0.15; % Convert frames to time in seconds
 
-imagesc(1:frame_count,array_bin_range,range_tx1rx1_max_abs);
-title(['Range FFT Amplitude Heatmap - Filename: ', fdata]); % Include the file name
-xlabel('Frames');
+figure(2);
+imagesc(time_axis, array_bin_range, range_tx1rx1_max_abs);
+
+title(['Range FFT Amplitude Heatmap - Filename: ', filename]); % Include the file name
+
+xlabel('Time (s)'); % Change from Frames to Time (Seconds)
 ylabel('Range (m)');
-set(gca,'YDir','normal');
+
+set(gca, 'YDir', 'normal');
 ylim([min_distance, max_distance]);
+colorbar; % Add a colorbar for better visualization
+
 
 
 

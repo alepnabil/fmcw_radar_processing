@@ -42,7 +42,20 @@
 % Tracking has not been used in this code. Range and Doppler
 % estimates are obatined for every frame and plotted. To obtain better
 % results tracking has to be used.
-%
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This program conducts:
+% 1. Radar and algorithm configurations
+% 2. Calculating theoretical radar values
+% 3. Iterates each frames of data and applies:
+%     - Fast time processing
+%     - Slow time processing
+%     - STFT
+% 4. Plots graphs:
+%     1. Spectrogram
+%     2. FFT
+%     3. Range FFT
+%     4. Target's speed, distance and radar signal strength
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Startup

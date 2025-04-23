@@ -56,6 +56,8 @@
 %     2. FFT
 %     3. Range FFT
 %     4. Target's speed, distance and radar signal strength
+% Make sure to import the data .xrg and .raw.bin files both in the same
+% directory as this program
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Startup
@@ -66,7 +68,7 @@ close all;
 %% Constants
 c0 = 3e8; % Speed of light in vacuum
 %% Raw Data Name
-fdata = 'superman_vertical'
+fdata = 'stingless_bees_take_1'
 
 
 %% !!!!!!!! 
@@ -80,6 +82,8 @@ fdata = 'superman_vertical'
 if not(isfile("D:\Upm Degree\FYP\Infineon data collection\Firmware_Software\Communication Library\ComLib_Matlab_Interface\RadarSystemExamples\Radarprocessing\xml2struct.m"))
    error("Please install xml2struct.m, please see comments in the source file above!") 
 end
+
+[~, filename, ~] = fileparts(fdata);
 %% Load the Raw Data file
 [frame, frame_count, calib_data, sXML] = f_parse_data2(fdata); % Data Parser
 disp(frame_count)
@@ -172,6 +176,12 @@ calib_q1 = calib_data(N_cal+1:dec_idx:2*N_cal);
 calib_rx1 = (calib_i1 + 1i * calib_q1).';
 
 
+% Define window length and ensure overlap < window length
+window_length = 20; % Adjust based on resolution needs
+overlap = window_length - 1; % Ensure overlap is less than window_length
+
+%% Initialize a variable to store concatenated data for all frames
+slow_time_signal_all_frames = [];
 
 %% Process Frames
 for fr_idx = 1:frame_count % Loop over all data frames, while the output window is still open
@@ -251,6 +261,12 @@ for fr_idx = 1:frame_count % Loop over all data frames, while the output window 
     range_Doppler_tx1rx1(tgt_range_idx,:) = fftshift(fft(range_tx1rx1(tgt_range_idx,:).*repmat(doppler_window_func.',num_of_targets,1),Doppler_fft_size,2),2); % Windowing across Doppler and Doppler FFT
     
     Rx_spectrum(:,:,1) = range_Doppler_tx1rx1; % Range Doppler spectrum
+
+
+    
+
+
+    
     
     %% Extraction of Indices from Range-Doppler Map
     % creates a matrix of 0s
@@ -279,6 +295,14 @@ for fr_idx = 1:frame_count % Loop over all data frames, while the output window 
             % calculates the speed using the highest magnitude value
             target_measurements.speed(   fr_idx,j) = (tgt_doppler_idx(j)- Doppler_fft_size/2 - 1) * -fD_per_bin * Hz_to_mps_constant;
         end
+    end
+
+
+      % After processing the frame, append the processed slow-time data for
+    % spectrogram
+    if num_of_targets > 0
+        selected_range_bin = tgt_range_idx(1); % Index of strongest target
+        slow_time_signal_all_frames = [slow_time_signal_all_frames, squeeze(range_tx1rx1_complete(selected_range_bin, :, fr_idx))]; % Concatenate data
     end
 end
 

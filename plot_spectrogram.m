@@ -6,8 +6,7 @@ close all;
 %% Constants
 c0 = 3e8; % Speed of light in vacuum
 %% Raw Data Name
-fdata = 'walking_with_arm'
-
+fdata = 'superman_vertical'
 
 %% !!!!!!!! 
 %  to parse the XML file, the package XML2STRUCT is requried.
@@ -117,6 +116,8 @@ calib_rx1 = (calib_i1 + 1i * calib_q1).';
 window_length = 15; % Adjust based on resolution needs
 overlap = window_length - 1; % Ensure overlap is less than window_length
 
+%% Initialize a variable to store concatenated data for all frames
+slow_time_signal_all_frames = [];
 
 
 
@@ -199,46 +200,41 @@ for fr_idx = 1:frame_count % Loop over all data frames, while the output window 
     
     Rx_spectrum(:,:,1) = range_Doppler_tx1rx1; % Range Doppler spectrum
 
-    if num_of_targets > 0
-            % Choose the strongest detected range bin
-            selected_range_bin = tgt_range_idx(1); % Index of strongest target
-            slow_time_signal = squeeze(range_tx1rx1_complete(selected_range_bin, :, fr_idx)); % Extract slow-time signal
-            iq_data = abs(slow_time_signal); % Convert to magnitude
-        
-            % Ensure FFT size is a power of 2 for efficiency
-            nfft_stft = 2^nextpow2(length(iq_data(:))); % Now iq_data is defined!
-        
-            % Compute spectrogram
-            [S, F, T, P] = spectrogram(iq_data, kaiser(window_length, 3), overlap, nfft_stft, 1/PRT, 'yaxis');
-            
-            G=max(P);
-
-
-            
-            % Plot results
-            figure(1); clf; % Clear figure for real-time update
-            subplot(2,1,1);
-            surf(T,F,20*log10(abs(P)/max(G)),'EdgeColor','none');
-            axis tight;
-            view(0,90);
-            colorbar;
-            clim([-40 0]);
-            set(gca, 'CLim', [-30 0]); % Sets the color scale from -30 dB to 0 dB
-            % imagesc(T, F, 20*log10(abs(P)/max(G)),'EdgeColor','none'); % Convert power to dB
-            axis xy; colormap jet; colorbar;
-            % ylim([0 100]); % Display frequencies from 0 to 100 Hz
-            xlabel('Time (s)'); ylabel('Frequency (Hz)');
-            title(['Frame ' num2str(fr_idx) ' - Time-Frequency Spectrogram']);
-        
-          
-     
-            pause(1); % Small pause for visualization update
-    end
-
-
-
-
-
+    % if num_of_targets > 0
+    %         % Choose the strongest detected range bin
+    %         selected_range_bin = tgt_range_idx(1); % Index of strongest target
+    %         slow_time_signal = squeeze(range_tx1rx1_complete(selected_range_bin, :, fr_idx)); % Extract slow-time signal
+    %         iq_data = abs(slow_time_signal); % Convert to magnitude
+    % 
+    %         % Ensure FFT size is a power of 2 for efficiency
+    %         nfft_stft = 2^nextpow2(length(iq_data(:))); % Now iq_data is defined!
+    % 
+    %         % Compute spectrogram
+    %         [S, F, T, P] = spectrogram(iq_data, kaiser(window_length, 3), overlap, nfft_stft, 1/PRT, 'yaxis');
+    % 
+    %         G=max(P);
+    % 
+    % 
+    % 
+    %         % Plot results
+    %         figure(1); clf; % Clear figure for real-time update
+    %         subplot(2,1,1);
+    %         surf(T,F,20*log10(abs(P)/max(G)),'EdgeColor','none');
+    %         axis tight;
+    %         view(0,90);
+    %         colorbar;
+    %         clim([-40 0]);
+    %         set(gca, 'CLim', [-30 0]); % Sets the color scale from -30 dB to 0 dB
+    %         % imagesc(T, F, 20*log10(abs(P)/max(G)),'EdgeColor','none'); % Convert power to dB
+    %         axis xy; colormap jet; colorbar;
+    %         % ylim([0 100]); % Display frequencies from 0 to 100 Hz
+    %         xlabel('Time (s)'); ylabel('Frequency (Hz)');
+    %         title(['Frame ' num2str(fr_idx) ' - Time-Frequency Spectrogram']);
+    % 
+    % 
+    % 
+    %         pause(1); % Small pause for visualization update
+    % end
     
     %% Extraction of Indices from Range-Doppler Map
     % creates a matrix of 0s
@@ -268,6 +264,14 @@ for fr_idx = 1:frame_count % Loop over all data frames, while the output window 
             target_measurements.speed(   fr_idx,j) = (tgt_doppler_idx(j)- Doppler_fft_size/2 - 1) * -fD_per_bin * Hz_to_mps_constant;
         end
     end
+
+         % After processing the frame, append the processed slow-time data for
+    % spectrogram
+    if num_of_targets > 0
+        selected_range_bin = tgt_range_idx(1); % Index of strongest target
+        slow_time_signal_all_frames = [slow_time_signal_all_frames, squeeze(range_tx1rx1_complete(selected_range_bin, :, fr_idx))]; % Concatenate data
+    end
+
 end
 
 %% Visualization
@@ -275,53 +279,38 @@ range_tx1rx1_max_abs = squeeze(abs(max(range_tx1rx1_complete,[],2)));
 
 
 
+ %% After all frames are processed, compute the spectrogram for the concatenated signal
+% if ~isempty(slow_time_signal_all_frames)
+iq_data = abs(slow_time_signal_all_frames); % Convert to magnitude
+
+% Ensure FFT size is a power of 2 for efficiency
+nfft_stft = 2^nextpow2(length(iq_data(:))); % Now iq_data is defined!
+
+% Compute spectrogram
+[S, F, T, P] = spectrogram(iq_data, kaiser(window_length, 3), overlap, nfft_stft, 1/PRT, 'yaxis');
+
+% Shift zero-frequency component to center
+F = fftshift(F);
+P = fftshift(P, 1); % Shift along the frequency dimension
+
+G = max(P);
+psd= 20*log10(abs(P)/max(G));
+% Plot results
 
 
+max_slider_index = length(T) - window_length; % Max slider position
 
+%% -------PLOT SPECTROGRAM--------
+figure(1); clf; % Clear figure for real-time update
+subplot(2,1,1);
+surf(T, F, 20*log10(abs(P)/max(G)), 'EdgeColor', 'none');
+axis tight;
+view(0, 90);
+colorbar;
+colormap(jet); % Change to a different colormap
+ylim([0 200]);
+clim([-20 0]);
+xlabel('Time (s)');
+ylabel('Frequency (Hz)');
+title(['All Frames - Time-Frequency Spectrogram']);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-% 
-% %% Spectrogram Analysis for Micro-Doppler Effect (Time-Frequency Representation)
-% 
-% % Parameters for STFT
-% window_length = 128; % Adjust for resolution
-% overlap = 120;       % Overlap between windows
-% nfft_stft = 256;     % FFT size for better frequency resolution
-% 
-% % Extract the slow-time signal for the selected range bin
-% selected_range_bin = tgt_range_idx(1); % Choose a strong target (adjust if needed)
-% slow_time_signal = squeeze(range_tx1rx1_complete(selected_range_bin, :, :)); % Get slow-time data
-% 
-% % Convert to baseband IQ data (if needed)
-% iq_data = abs(slow_time_signal); % Magnitude of complex IQ signal
-% 
-% % Compute and plot spectrogram
-% figure;
-% [s, f, t, p] = spectrogram(iq_data(:), window_length, overlap, nfft_stft, 1/PRT, 'yaxis');
-% 
-% % Plot the time-frequency representation
-% imagesc(t, f, 10*log10(abs(p))); % Convert power to dB
-% axis xy; % Flip the y-axis for proper orientation
-% colormap jet; % Use the jet colormap for better visibility
-% colorbar;
-% xlabel('Time (s)');
-% ylabel('Frequency (Hz)');
-% title('Time-Frequency Spectrogram');
-% 

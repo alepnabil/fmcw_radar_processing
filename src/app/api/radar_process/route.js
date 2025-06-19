@@ -1,13 +1,8 @@
-import https from "https";
-import fetch from "node-fetch"; // Use node-fetch instead of global fetch
+import fetch from "node-fetch";
 
 export async function POST(req) {
   try {
-    const mpsUrl = "http://localhost:9910/radar_processing_with_azure/radar_processing_with_azure";
-
-    const agent = new https.Agent({
-      rejectUnauthorized: false, // Accept self-signed cert
-    });
+    const mpsUrl = "http://localhost:9910/radar_processing_with_azure/radar_processing_with_azure"; // <== changed to http
 
     const mpsResponse = await fetch(mpsUrl, {
       method: "POST",
@@ -18,11 +13,10 @@ export async function POST(req) {
         nargout: 1,
         rhs: [""],
       }),
-      agent, // Works with node-fetch!
     });
 
     const text = await mpsResponse.text();
-    console.log("MPS Raw Response:", text);
+    console.log("MPS Local Response:", text);
 
     if (!mpsResponse.ok) {
       throw new Error(`MPS Error ${mpsResponse.status}: ${text}`);

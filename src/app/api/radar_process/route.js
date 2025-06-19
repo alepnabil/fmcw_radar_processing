@@ -3,7 +3,7 @@ import fetch from "node-fetch"; // Use node-fetch instead of global fetch
 
 export async function POST(req) {
   try {
-    const mpsUrl = "";
+    const mpsUrl = "http://localhost:9910/radar_processing_with_azure/radar_processing_with_azure";
 
     const agent = new https.Agent({
       rejectUnauthorized: false, // Accept self-signed cert

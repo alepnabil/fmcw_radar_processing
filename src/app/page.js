@@ -16,6 +16,12 @@ const RangeFFT = dynamic(() => import("../../components/range_fft"), { ssr: fals
 const RangeSpeedPlot = dynamic(() => import("../../components/range_speed"), { ssr: false, loading: () => <LoadingSpinner /> });
 const RangePlot = dynamic(() => import("../../components/rangePlot"), { ssr: false, loading: () => <LoadingSpinner /> });
 const SpeedPlot = dynamic(() => import("../../components/speedPlot"), { ssr: false, loading: () => <LoadingSpinner /> });
+const FFTPlot = dynamic(() => import('../../components/fft'), {
+  ssr: false,
+  loading: () => <LoadingSpinner />,
+});
+
+
 
 import { Inter, Poppins } from 'next/font/google';
 
@@ -85,42 +91,65 @@ export default function Home() {
     margin: { l: 40, r: 20, t: 20, b: 40 }
   };
 
-  const loadData = async () => {
-    try {
-      const [rangeData, spectrogramData, speedDistanceData] = await Promise.all([
-        import("./range_fft_data.json"),
-        import("./spectrogram_data.json"),
-        import("./range_speed_data.json"),
-      ]);
+const loadData = async () => {
+  try {
+    const [rangeData, spectrogramData, speedDistanceData, fftData] = await Promise.all([
+      import("./range_fft_data.json"),
+      import("./spectrogram_data.json"),
+      import("./range_speed_data.json"),
+      import("./fft_data.json"),
+    ]);
 
-      const debug = {
-        spectrogram: {
-          dimensions: {
-            time: spectrogramData.default.time?.length,
-            frequency: spectrogramData.default.frequency?.length,
-            intensity: `${spectrogramData.default.intensity?.length}x${spectrogramData.default.intensity?.[0]?.length}`
-          },
-        }
-      };
-      setDebugInfo(debug);
+    const debug = {
+      spectrogram: {
+        dimensions: {
+          time: spectrogramData.default.time?.length,
+          frequency: spectrogramData.default.frequency?.length,
+          intensity: `${spectrogramData.default.intensity?.length}x${spectrogramData.default.intensity?.[0]?.length}`
+        },
+      },
+      fft: {
+        freqLength: fftData.default.range_bins?.length,
+        magnitudeLength: fftData.default.magnitude?.length,
+      }
+    };
+    setDebugInfo(debug);
 
-      setData({
-        range: rangeData.default,
-        spectrogram: spectrogramData.default,
-        speedDistance: {
-          timeAxis: speedDistanceData.default.time_axis,
-          rangeData: speedDistanceData.default.range,
-          speedData: speedDistanceData.default.speed
-        }
-      });
-    } catch (error) {
-      console.error("Error loading initial data:", error);
-      setDebugInfo({ error: error.message });
+    setData({
+      range: rangeData.default,
+      spectrogram: spectrogramData.default,
+      speedDistance: {
+        timeAxis: speedDistanceData.default.time_axis,
+        rangeData: speedDistanceData.default.range,
+        speedData: speedDistanceData.default.speed
+      },
+      fft: {
+        freq: fftData.default.range_bins,   // ✅ fixed key name
+        magnitude: fftData.default.magnitude,
+        filename: fftData.default.filename  // optional: for plot title
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error loading initial data:", error);
+    setDebugInfo({ error: error.message });
+  }
+};
+
+
+  useEffect(() => {
+    if (data?.fft) {
+      console.log("✅ FFT Data Loaded:");
+      console.log("Frequency Axis:", data.fft.freqAxis);
+      console.log("FFT Matrix:", data.fft.fftMatrix);
+    } else {
+      console.warn("⚠️ No FFT data found in loaded state.");
     }
-  };
+  }, [data]);
 
-  const refreshData = async () => {
-    setIsRefreshing(true);
+
+  const refreshData = async () => { 
+    setIsRefreshing(true);  
     try {
       const [rangeRes, spectrogramRes, speedDistanceRes] = await Promise.all([
         fetch(`/radar_data_range_fft_data.json`),
@@ -172,7 +201,7 @@ export default function Home() {
     <NoSSR>
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 pt-[64px]">
         {/* Fixed left-top header above sidebar */}
-        <div className="fixed top-0 left-0 w-[280px] bg-slate-900/90 z-[60] px-6 py-4 border-b border-slate-800">
+        <div className="fixed top-0 left-0 w-[280px] bg-slate-900/70 backdrop-blur-md shadow-md shadow-slate-800/30 z-[60] px-6 py-4 border-b border-slate-800">
           <h1 className="font-inter text-xl font-semibold text-white">
             RawrDar-24.5
             <span className="ml-2 text-xs font-medium px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded-full">BETA</span>
@@ -191,11 +220,11 @@ export default function Home() {
           </div>
         </nav>
 
-        <div className="flex pt-14">
+        <div className="flex pt-2">
           <Sidebar />
           <main className="flex-1 ml-[280px]">
             <div className="max-w-[1600px] mx-auto px-20">
-              <div className="flex items-center justify-between mb-8 pt-8">
+              <div className="flex items-center justify-between mb-6 pt-4">
                 <div>
                   <h2 className="font-inter text-2xl font-bold text-white">
                     Radar Analysis Dashboard
@@ -211,20 +240,32 @@ export default function Home() {
               </div>
 
               {/* Plots */}
-              <div className="grid grid-cols-2 gap-6 mb-6">
+            
+              <div className="grid grid-cols-2 gap-4 mb-4">
+
                 <div className="col-span-2 grid grid-cols-2 gap-4">
-                  <div className="bg-navy-800 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-white mb-2">Target Speed</h3>
-                    <p className="text-sm text-slate-400 mb-4">m/s</p>
+                    <div className="col-span-2 bg-navy-800 rounded-lg p-2">
+                    <h3 className="text-lg font-semibold text-white mb-2">Fast Fourier Transform Spectrum</h3>
+                    {data?.fft && (
+                      <FFTPlot
+                        freqAxis={data.fft.range_bins || data.fft.freq}
+                        fftMagnitude={data.fft.magnitude}
+                        title="Fast Fourier Transform Spectrum"
+                      />
+                    )}
+                  </div>
+
+
+                  <div className="bg-navy-800 rounded-lg p-2">
+                    <h3 className="text-lg font-semibold text-white mb-2">Target Speed(m/s)</h3>
                     <SpeedPlot
                       timeAxis={data.speedDistance.timeAxis}
                       speedData={data.speedDistance.speedData}
                       layout={chartConfig}
                     />
                   </div>
-                  <div className="bg-navy-800 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-white mb-2">Target Range</h3>
-                    <p className="text-sm text-slate-400 mb-4">meters</p>
+                  <div className="bg-navy-800 rounded-lg p-2">
+                    <h3 className="text-lg font-semibold text-white mb-2">Target Range(meters)</h3>
                     <RangePlot
                       timeAxis={data.speedDistance.timeAxis}
                       rangeData={data.speedDistance.rangeData}
@@ -242,10 +283,10 @@ export default function Home() {
                     />
                   </div>
                 </div>
-
-                <div className="col-span-2 bg-navy-800 rounded-lg p-4">
+              
+            
+                <div className="col-span-2 bg-navy-800 rounded-lg p-2">
                   <h3 className="text-lg font-semibold text-white mb-2">Time-Frequency Analysis</h3>
-                  <p className="text-sm text-slate-400 mb-4">Spectral power distribution over time</p>
                   <Spectrogram
                     time={data.spectrogram.time}
                     frequency={data.spectrogram.frequency}
@@ -253,9 +294,8 @@ export default function Home() {
                   />
                 </div>
 
-                <div className="col-span-2 bg-navy-800 rounded-lg p-4">
+                <div className="col-span-2 bg-navy-800 rounded-lg p-2">
                   <h3 className="text-lg font-semibold text-white mb-2">Range FFT Analysis</h3>
-                  <p className="text-sm text-slate-400 mb-4">Signal strength</p>
                   <RangeFFT
                     timeAxis={data.range.time_axis}
                     rangeBins={data.range.array_bin_range}
@@ -264,10 +304,18 @@ export default function Home() {
                   />
                 </div>
               </div>
+
+
+
+
+
+
             </div>
           </main>
         </div>
       </div>
     </NoSSR>
   );
+
+
 }

@@ -60,15 +60,14 @@ function radar_processing(fdata)
 % 2. range_fft = data to plot range FFT
 % 3. range_speed = data to plot range and speed of objects over time
 
-    fdata = 'superman_vertical'
     %% Constants
+    addpath("lib");  % if you put it in a subfolder
+
+    fdata='radar_data'
     c0 = 3e8; % Speed of light in vacuum
-      
     [~, filename, ~] = fileparts(fdata);
     
-    disp(filename); % Output: walking_towards_radar_4_3
-    
-    
+    disp(fdata); % Output: walking_towards_radar_4_3
     
     %% !!!!!!!! 
     %  to parse the XML file, the package XML2STRUCT is requried.
@@ -79,11 +78,10 @@ function radar_processing(fdata)
     %  function!
     %
 
-
-    % Reads parse function file from blob storage
-    if not(isfile("D:\Upm Degree\FYP\Infineon data collection\Firmware_Software\Communication Library\ComLib_Matlab_Interface\RadarSystemExamples\Radarprocessing\xml2struct.m"))
-       error("Please install xml2struct.m, please see comments in the source file above!") 
+    if ~exist('xml2struct', 'file')
+    error("Missing required function: xml2struct.m. Ensure it is included in the deployed files.");
     end
+ 
     %% Load the Raw Data file
     [frame, frame_count, calib_data, sXML] = f_parse_data2(fdata); % Data Parser
     disp(frame_count)
@@ -175,8 +173,7 @@ function radar_processing(fdata)
     
     calib_rx1 = (calib_i1 + 1i * calib_q1).';
     
-    
-    
+   
     % Define window length and ensure overlap < window length
     window_length = 20; % Adjust based on resolution needs
     overlap = window_length - 1; % Ensure overlap is less than window_length
@@ -185,6 +182,7 @@ function radar_processing(fdata)
     %% Initialize a variable to store concatenated data for all frames
     slow_time_signal_all_frames = [];
     
+    frame_count = 200
     %% Main loop for processing Frames
     for fr_idx = 1:frame_count % Loop over all data frames
         
@@ -277,20 +275,27 @@ function radar_processing(fdata)
     
     
     max_slider_index = length(T) - window_length; % Max slider position
+
+    % Create a new invisible figure for this batch
+    fig = figure('Visible', 'off', 'Position', [100 100 600 400]);
+    surf(T, F, psd, 'EdgeColor', 'none');
+    view(0, 90);
+    axis tight;
+    ylim([0 150]);
+    clim([-40 0]);
+    axis off;
+    colormap(jet);
+    colorbar('off');
     
-    %% -------PLOT SPECTROGRAM--------
-    % figure(1); clf; % Clear figure for real-time update
-    % subplot(2,1,1);
-    % surf(T, F, 20*log10(abs(P)/max(G)), 'EdgeColor', 'none');
-    % axis tight;
-    % view(0, 90);
-    % colorbar;
-    % colormap(jet); % Change to a different colormap
-    % ylim([0 200]);
-    % clim([-40 0]);
-    % xlabel('Time (s)');
-    % ylabel('Frequency (Hz)');
-    % title(['All Frames - Time-Frequency Spectrogram']);
+    % Save spectrogram image to current directory
+    spectrogram_pic_filename = 'spectrogram.png';  % Simple, flat filename
+    exportgraphics(fig, spectrogram_pic_filename, 'Resolution', 600);
+    close(fig);
+
+    % Upload to Azure Blob Storage
+    send_picture_to_blob_storage(spectrogram_pic_filename);
+
+
 
     
     %% ---- APPLY LOGARITHMIC FREQUENCY SCALING ----
@@ -303,8 +308,16 @@ function radar_processing(fdata)
     % Interpolate intensity values onto log frequency scale
     interp_intensity = interp1(F, psd, log_freq_bins, 'linear', 'extrap');
     
-    % ---- SAVE TO JSON ----
     
+    %% ---- SAVE ALGORITHM OUTPUT DATA TO JSON ----
+
+    % Create output folder if it doesn't exist
+    output_folder = 'radar_data';
+    if ~exist(output_folder, 'dir')
+        mkdir(output_folder);
+    end
+    
+   
     % Prepare data structure for spectrogram
     data.time = T;
     data.frequency = log_freq_bins;
@@ -317,192 +330,201 @@ function radar_processing(fdata)
     json_data = jsonencode(data, 'PrettyPrint', true);
     
     % Save JSON to file
-    json_filename = 'spectrogram_data.json';
-    fid = fopen(json_filename, 'w');
+    spectrogram_filename = 'spectrogram_data.json';
+    fid = fopen(spectrogram_filename, 'w');
     if fid ~= -1
         fprintf(fid, '%s', json_data);
         fclose(fid);
-        disp(['Data saved to ', json_filename]);
+        disp(['Data saved to ', spectrogram_filename]);
     else
         disp('Error: Could not open file for writing.');
     end
     
-    % 
-    % % Compute time axis based on frame duration
-    % time_axis = (0:frame_count-1) * 0.15; % Convert frames to time in seconds
-    % 
-    % figure(2);
-    % imagesc(time_axis, array_bin_range, range_tx1rx1_max_abs);
-    % 
-    % title(['Range FFT Amplitude Heatmap - Filename: ', filename]); % Include the file name
-    % 
-    % xlabel('Time (s)'); % Change from Frames to Time (Seconds)
-    % ylabel('Range (m)');
-    % 
-    % set(gca, 'YDir', 'normal');
-    % ylim([min_distance, max_distance]);
-    % colorbar; % Add a colorbar for better visualization
-    % 
-    
-    
+    send_json_string_to_blob_storage(spectrogram_filename);
+
+
+
+
+
+
+    time_axis = (0:frame_count-1) * 0.15; % Convert frames to time in seconds
+
     % Prepare data for JSON
-    data.time_axis = time_axis;
-    data.array_bin_range = array_bin_range;
-    data.range_tx1rx1_max_abs = range_tx1rx1_max_abs;
-    data.filename = filename; % Include the filename
+    range_fft.time_axis = time_axis;
+    range_fft.array_bin_range = array_bin_range;
+    range_fft.range_tx1rx1_max_abs = range_tx1rx1_max_abs;
+    range_fft.filename = filename; % Include the filename
     
     % Convert data to JSON format
-    json_data = jsonencode(data, 'PrettyPrint', true);
+    json_data = jsonencode(range_fft, 'PrettyPrint', true);
     
     % Save JSON to file
-    json_filename = [filename, '_range_fft_data.json']; % Create a filename
-    fid = fopen(json_filename, 'w');
+    range_fft_filename = [filename, '_range_fft_data.json']; % Create a filename
+    fid = fopen(range_fft_filename, 'w');
     if fid ~= -1
         fprintf(fid, '%s', json_data);
         fclose(fid);
-        disp(['Data saved to ', json_filename]);
+        disp(['Data saved to ', range_fft_filename]);
     else
         disp('Error: Could not open file for writing.');
     end
+   
+    send_json_string_to_blob_storage(range_fft_filename);
+
+    time_axis_range_speed = (0:frame_count-1) * 0.15; % Convert frames to time in seconds
+
+
+
+
+
+    %% 3. Save Target Detection (Range + Speed) Data
+    range_speed_data.time_axis = time_axis_range_speed;
+    range_speed_data.range = target_measurements.range;
+    range_speed_data.speed = target_measurements.speed;
+    range_speed_data.filename = filename;
+
+    % Convert to JSON
+    range_speed_json = jsonencode(range_speed_data, 'PrettyPrint', true);
+
+    % Save JSON to file
+    % range_speed_filename = fullfile(output_folder, 'range_speed.json');
+    range_speed_filename = [filename, '_range_speed_data.json']; % Create a filename
+    fid = fopen(range_speed_filename, 'w');
+    if fid ~= -1
+        fprintf(fid, '%s', range_speed_json);
+        fclose(fid);
+        disp(['✅ Range-Speed data saved to ', range_speed_filename]);
+    else
+        disp('❌ Error: Could not open file for writing range-speed data.');
+    end
+
+     % Save JSON to a separate file (Range and Speed)
+    send_json_string_to_blob_storage(range_speed_filename);
+
+    %% -------PLOT AND SAVE FFT DATA----------------
+    fr_idx = 100;
+    Rspectrum = abs(range_tx1rx1_complete(:,fr_idx));
     
-    
+    % Determine the x-axis based on your range FFT size
+    num_range_bins = size(Rspectrum, 1);
+    range_bins = 0:num_range_bins-1; % Assuming bins start from 0
     
 
-    %%% Plot the target detection results (amplitude, range, speed)
-    % This figure illustrates the target information in three subplots:
-    %    1) Range FFT amplitude depictes the signal strength of the reflected
-    %       wave from the target and is dependent on the RCS and the distance
-    %       of the target. The larger the RCS and the smaller the distance to
-    %       the antenna, the higher the FFT amplitude.
-    %       NOTE: A target is only detected if its amplitude is larger than
-    %       the range_threshold! Otherwise, the FFT amplitude is set to zero.
-    %       ATTENTION: The amplitude of a human target is fluctuating due to
-    %       positive and negative interferences, for which reason the target
-    %       sometimes disappears. This can be prevented by further signal
-    %       processing like tracking.
-    %    2) Range information of the target. Targets are deteced only within
-    %       min_distance and max_distance.
-    %    3) Speed/velocity of the target. Positiv value for an approaching
-    %       target, negative value for a departing target.
-    %       NOTE: If the maximum Doppler FFT amplitude is below the
-    %       Doppler_threshold, the speed is set to zero. This does not
-    %       influence the target detection, but can be used in tracking
-    %       algorithms to extinguish static targets.
+    % Structure for JSON export
+    fft_data.range_bins = range_bins;
+    fft_data.magnitude = Rspectrum;
+    fft_data.frame_index = fr_idx;
+    fft_data.filename = filename;
     
-    % figure(3);
-    % leg = [];
-    % 
-    % for i = 1:max_num_targets
-    %     leg = [leg; 'Target ', num2str(i)];
-    % 
-    %     subplot(3,1,1);
-    %     hold on;
-    %     plot(time_axis, target_measurements.strength(:,i)); % X-axis now in seconds
-    % 
-    %     subplot(3,1,2);
-    %     hold on;
-    %     plot(time_axis, target_measurements.range(:,i)); % X-axis now in seconds
-    % 
-    %     subplot(3,1,3);
-    %     hold on;
-    %     plot(time_axis, target_measurements.speed(:,i)); % X-axis now in seconds
-    % end
+    % Encode to JSON
+    fft_json = jsonencode(fft_data, 'PrettyPrint', true);
     
-    % ax1 = subplot(3,1,1);
-    % plot([0, time_axis(end)], [range_threshold, range_threshold], 'k');
-    % title(['FFT Amplitude - Filename: ', filename]); % Include the file name
-    % xlabel('Time (s)'); % Change from Frames to Time (Seconds)
-    % ylabel('Amplitude');
-    % leg_range = [leg; 'Range TH'];
-    % legend(leg_range, 'Location', 'EastOutside');
-    % 
-    % ax2 = subplot(3,1,2);
-    % title(['Range - Filename: ', filename]); % Include the file name
-    % xlabel('Time (s)'); % Change from Frames to Time (Seconds)
-    % ylabel('Range (m)');
-    % legend(leg, 'Location', 'EastOutside');
-    % 
-    % ax3 = subplot(3,1,3);
-    % title(['Speed - Filename: ', filename]); % Include the file name
-    % xlabel('Time (s)'); % Change from Frames to Time (Seconds)
-    % ylabel('Speed (m/s)');
-    % legend(leg, 'Location', 'EastOutside');
-    % 
-    % linkaxes([ax1, ax2, ax3], 'x'); % Sync x-axes
-    
-    
-    
-    % Prepare data for JSON (Range and Speed)
-    data_range_speed.time_axis = time_axis;
-    data_range_speed.range = target_measurements.range;
-    data_range_speed.speed = target_measurements.speed;
-    data_range_speed.filename = filename; % Include the filename
-    
-    % Convert data to JSON format
-    json_range_speed = jsonencode(data_range_speed, 'PrettyPrint', true);
-    
-    % Save JSON to a separate file (Range and Speed)
-    json_range_speed_filename = [filename, '_range_speed_data.json']; % Create a separate filename
-    fid_range_speed = fopen(json_range_speed_filename, 'w');
-    if fid_range_speed ~= -1
-        fprintf(fid_range_speed, '%s', json_range_speed);
-        fclose(fid_range_speed);
-        disp(['Range and speed data saved to ', json_range_speed_filename]);
+    % Save to file
+    fft_filename = [filename, '_fft_data.json'];
+    fid = fopen(fft_filename, 'w');
+    if fid ~= -1
+        fprintf(fid, '%s', fft_json);
+        fclose(fid);
     else
-        disp('Error: Could not open file for writing range and speed data.');
+        disp('❌ Error: Could not open file for writing FFT data.');
     end
+    send_json_string_to_blob_storage(fft_filename);
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    %  % Prepare data for JSON (Range and Speed)
+    % range_speed_datatime_axis = time_axis;
+    % range_speed_data.range = target_measurements.range;
+    % range_speed_data.speed = target_measurements.speed;
+    % range_speed_data.filename = filename; % Include the filename
     % 
-    % fr_idx = 41;
-    % Rspectrum = abs(range_tx1rx1_complete(:,:));
+    % % Convert data to JSON format
+    % range_speed_filename = jsonencode(range_speed_data, 'PrettyPrint', true);
     % 
-    % figure(4)
-    % plot(Rspectrum)
-    % title(['Range Spectrum - Filename: ', filename]); % Include the file name
-    
-    % Define FMCW Radar Configuration Structure
-    fmcw_configurations = struct( ...
-        'frame_time', frame_time, ...
-        'PRT', PRT, ...
-        'Bandwidth', BW, ...
-        'num_Tx_antennas', num_Tx_antennas, ...
-        'num_Rx_antennas', num_Rx_antennas, ...
-        'carrier_frequency', fC, ...
-        'num_ADC_samples_per_chirp', NTS, ...
-        'num_chirps_per_frame', PN, ...
-        'sampling_frequency', fS, ...
-        'range_fft_size', range_fft_size, ...
-        'Doppler_fft_size', Doppler_fft_size, ...
-        'IF_scale', IF_scale, ...
-        'range_threshold', range_threshold, ...
-        'Doppler_threshold', Doppler_threshold, ...
-        'min_distance', min_distance, ...
-        'max_distance', max_distance, ...
-        'max_num_targets', max_num_targets, ...
-        'lambda', lambda, ...
-        'Hz_to_mps_constant', Hz_to_mps_constant, ...
-        'R_max', R_max, ...
-        'dist_per_bin', dist_per_bin, ...
-        'fD_max', fD_max, ...
-        'fD_per_bin', fD_per_bin, ...
-        'window_length', window_length, ...
-        'max_slider_index', max_slider_index, ...
-        'overlap', overlap ...
-    );
-    
-    % Convert MATLAB struct to JSON format
-    json_str = jsonencode(fmcw_configurations);
-    
-    % Format JSON for readability (optional)
-    json_str = strrep(json_str, ',', sprintf(',\n')); 
-    
-    % Write JSON data to a file
-    filename = 'fmcw_configurations.json';
-    fid = fopen(filename, 'w');
-    if fid == -1
-        error('Cannot open file: %s', filename);
-    end
-    fprintf(fid, '%s', json_str);
-    fclose(fid);
-    
-    disp(['JSON file saved as ', filename]);
+    % % Save JSON to a separate file (Range and Speed)
+    % json_range_speed_filename = [filename, '_range_speed_data.json']; % Create a separate filename
+    % fid_range_speed = fopen(json_range_speed_filename, 'w');
+    % if fid_range_speed ~= -1
+    %     fprintf(fid_range_speed, '%s', range_speed_filename);
+    %     fclose(fid_range_speed);
+    %     disp(['Range and speed data saved to ', json_range_speed_filename]);
+    % else
+    %     disp('Error: Could not open file for writing range and speed data.');
+    % end
+    % 
+    % send_json_string_to_blob_storage(json_range_speed_filename);
+
+    % 
+    % 
+    % 
+    % % Define FMCW Radar Configuration Structure
+    % fmcw_configurations = struct( ...
+    %     'frame_time', frame_time, ...
+    %     'PRT', PRT, ...
+    %     'Bandwidth', BW, ...
+    %     'num_Tx_antennas', num_Tx_antennas, ...
+    %     'num_Rx_antennas', num_Rx_antennas, ...
+    %     'carrier_frequency', fC, ...
+    %     'num_ADC_samples_per_chirp', NTS, ...
+    %     'num_chirps_per_frame', PN, ...
+    %     'sampling_frequency', fS, ...
+    %     'range_fft_size', range_fft_size, ...
+    %     'Doppler_fft_size', Doppler_fft_size, ...
+    %     'IF_scale', IF_scale, ...
+    %     'range_threshold', range_threshold, ...
+    %     'Doppler_threshold', Doppler_threshold, ...
+    %     'min_distance', min_distance, ...
+    %     'max_distance', max_distance, ...
+    %     'max_num_targets', max_num_targets, ...
+    %     'lambda', lambda, ...
+    %     'Hz_to_mps_constant', Hz_to_mps_constant, ...
+    %     'R_max', R_max, ...
+    %     'dist_per_bin', dist_per_bin, ...
+    %     'fD_max', fD_max, ...
+    %     'fD_per_bin', fD_per_bin, ...
+    %     'window_length', window_length, ...
+    %     'max_slider_index', max_slider_index, ...
+    %     'overlap', overlap ...
+    % );
+    % 
+    % % Convert MATLAB struct to JSON format
+    % json_str = jsonencode(fmcw_configurations);
+    % 
+    % % Format JSON for readability (optional)
+    % json_str = strrep(json_str, ',', sprintf(',\n')); 
+    % 
+    % % Write JSON data to a file
+    % filename = 'fmcw_configurations.json';
+    % fid = fopen(filename, 'w');
+    % if fid == -1
+    %     error('Cannot open file: %s', filename);
+    % end
+    % fprintf(fid, '%s', json_str);
+    % fclose(fid);
+    % 
+    % disp(['JSON file saved as ', filename]);

@@ -7,6 +7,8 @@ import FileUpload from '../../components/uploadbutton';
 import ProcessButton from '../../components/processbutton';
 import RefreshButton from '../../components/refreshbutton';
 import Sidebar from '../../components/sidebar';
+import SpectrogramImageGenerator from '../../components/generateSpectrogram';
+
 
 const LoadingSpinner = dynamic(() => import('../../components/LoadingSpinner'), { ssr: false });
 const NoSSR = dynamic(() => import('../../components/NoSSR'), { ssr: false });
@@ -79,6 +81,10 @@ export default function Home() {
   const [debugInfo, setDebugInfo] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [showSpectrogramGenerator, setShowSpectrogramGenerator] = useState(false);
+
+  
+
 
   const chartConfig = {
     title: {
@@ -154,6 +160,12 @@ export default function Home() {
       setDebugInfo({ error: error.message });
     }
   };
+
+
+    const handleGenerateSpectrogram = () => {
+    setShowSpectrogramGenerator(true);
+  };
+
 
   useEffect(() => {
     if (data?.fft) {
@@ -328,6 +340,13 @@ export default function Home() {
             </div>
           </div>
         </div>
+      
+
+
+                    
+
+
+
       </nav>
 
         <div className="flex pt-[80px]">

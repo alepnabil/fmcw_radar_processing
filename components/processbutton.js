@@ -1,8 +1,11 @@
+// components/processbutton.js
 'use client';
 import { useState } from 'react';
+// Ensure the path is correct
 import { processRadarData } from '../src/app/apiMatlab/matlab_api';
 
-export default function ProcessButton() {
+export default function ProcessButton({ processAnimalActivityValue }) {
+// --- CHANGE ENDS HERE ---
   const [status, setStatus] = useState({
     isProcessing: false,
     message: null,
@@ -17,10 +20,12 @@ export default function ProcessButton() {
         type: null
       });
 
-      const response = await processRadarData();
+
+      const response = await processRadarData(processAnimalActivityValue);
+
       if (!response) {
-      throw new Error('MATLAB API did not return a response.');
-    }
+        throw new Error('MATLAB API did not return a response.');
+      }
 
       if (response) {
         setStatus({
@@ -28,7 +33,7 @@ export default function ProcessButton() {
           message: 'Processing complete!',
           type: 'success'
         });
-      
+
       // Step 2: After MATLAB finishes, call Blob Storage refresh API
       setStatus({
         isProcessing: true,
@@ -42,7 +47,7 @@ export default function ProcessButton() {
         throw new Error(`Blob download failed: ${blobResponse.status}`);
       }
 
-       // Step 3: Done
+        // Step 3: Done
       setStatus({
         isProcessing: false,
         message: 'Processing complete!',
@@ -71,8 +76,8 @@ export default function ProcessButton() {
         onClick={handleProcessClick}
         disabled={status.isProcessing}
         className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2
-          ${status.isProcessing 
-            ? 'bg-emerald-500/50 cursor-not-allowed' 
+          ${status.isProcessing
+            ? 'bg-emerald-500/50 cursor-not-allowed'
             : 'bg-emerald-500 hover:bg-emerald-600'
           } text-white`}
       >

@@ -1,4 +1,4 @@
-export const runtime = 'nodejs'; // ✅ Ensures Node.js environment
+export const runtime = 'nodejs'; // Ensures Node.js environment
 
 import { BlobServiceClient } from '@azure/storage-blob';
 import fs from 'fs';
@@ -65,7 +65,6 @@ export async function POST(request) {
 }
 
 
-
 export async function GET() {
   try {
     const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
@@ -78,35 +77,60 @@ export async function GET() {
     const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
     const containerClient = blobServiceClient.getContainerClient(containerName);
 
-    const spectrogramBlobClient = containerClient.getBlockBlobClient('spectrogram_data.json');
-    const rangeFftBlobClient = containerClient.getBlockBlobClient('radar_data_range_fft_data.json');
-    const rangeSpeedBlobClient = containerClient.getBlockBlobClient('radar_data_range_speed_data.json');
+    // Define the list of core files
+    const coreFiles = [
+      { name: 'spectrogram_data.json', client: containerClient.getBlockBlobClient('spectrogram_data.json') },
+      { name: 'radar_data_range_fft_data.json', client: containerClient.getBlockBlobClient('radar_data_range_fft_data.json') },
+      { name: 'radar_data_range_speed_data.json', client: containerClient.getBlockBlobClient('radar_data_range_speed_data.json') },
+      { name: 'radar_data_fft_data.json', client: containerClient.getBlockBlobClient('radar_data_fft_data.json') },
+    ];
 
-    const [fftExists, speedExists, spectrogramExists] = await Promise.all([
-      rangeFftBlobClient.exists(),
-      rangeSpeedBlobClient.exists(),
-      spectrogramBlobClient.exists()
-    ]);
+    // Define the list of batch spectrogram files
+    const batchSpectrogramFiles = [
+      { name: 'radar_data_spectrogram_batch_1.json', client: containerClient.getBlockBlobClient('radar_data_spectrogram_batch_1.json') },
+      { name: 'radar_data_spectrogram_batch_2.json', client: containerClient.getBlockBlobClient('radar_data_spectrogram_batch_2.json') },
+      { name: 'radar_data_spectrogram_batch_3.json', client: containerClient.getBlockBlobClient('radar_data_spectrogram_batch_3.json') },
+      { name: 'radar_data_spectrogram_batch_4.json', client: containerClient.getBlockBlobClient('radar_data_spectrogram_batch_4.json') },
+    ];
 
-    if (!fftExists || !speedExists || !spectrogramExists) {
-      return new Response(JSON.stringify({ error: 'One or more files missing' }), { status: 404 });
+    // Combine all files for existence check and download
+    const allFiles = [...coreFiles, ...batchSpectrogramFiles];
+
+    // Check existence of all files concurrently
+    const existenceChecks = await Promise.all(
+      allFiles.map(file => file.client.exists())
+    );
+
+    // Filter out files that don't exist
+    const existingFiles = allFiles.filter((_, index) => existenceChecks[index]);
+
+
+    if (existingFiles.length === 0) {
+        return new Response(JSON.stringify({ error: 'No data files found in Azure Blob Storage.' }), { status: 404 });
     }
 
-    const [rangeFftBuffer, rangeSpeedBuffer, spectrogramBuffer] = await Promise.all([
-      rangeFftBlobClient.downloadToBuffer(),
-      rangeSpeedBlobClient.downloadToBuffer(),
-      spectrogramBlobClient.downloadToBuffer()
-    ]);
+    // Download only the existing files concurrently
+    const downloadPromises = existingFiles.map(file => file.client.downloadToBuffer());
+    const downloadedBuffers = await Promise.all(downloadPromises);
 
-    // ✅ Save files to /public directory
+    // Save files to /public directory
     const saveDir = path.join(process.cwd(), 'public');
 
-    fs.writeFileSync(path.join(saveDir, 'radar_data_range_fft_data.json'), rangeFftBuffer);
-    fs.writeFileSync(path.join(saveDir, 'radar_data_range_speed_data.json'), rangeSpeedBuffer);
-    fs.writeFileSync(path.join(saveDir, 'spectrogram_data.json'), spectrogramBuffer);
+    // Create the public directory if it doesn't exist
+    if (!fs.existsSync(saveDir)) {
+      fs.mkdirSync(saveDir, { recursive: true });
+    }
+
+    existingFiles.forEach((file, index) => {
+      const buffer = downloadedBuffers[index];
+      const filePath = path.join(saveDir, file.name);
+      fs.writeFileSync(filePath, buffer);
+      console.log(`Saved ${file.name} to ${filePath}`);
+    });
 
     return new Response(JSON.stringify({
-      message: 'Files downloaded and saved to /public/',
+      message: `Successfully downloaded and saved ${existingFiles.length} files to /public/`,
+      downloadedFiles: existingFiles.map(f => f.name),
       lastUpdated: new Date().toISOString()
     }), {
       status: 200,
@@ -119,6 +143,7 @@ export async function GET() {
   }
 }
 
+// Your existing RefreshButton component (no changes needed here for the file download logic)
 export default function RefreshButton() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -142,7 +167,9 @@ export default function RefreshButton() {
       setLastUpdated(new Date());
       
       // You can add state management here for the graphs
-      
+      // You might want to trigger a re-render of your BatchAnalysisView
+      // if it depends on these newly downloaded files.
+
     } catch (error) {
       console.error('Failed to refresh data:', error);
     } finally {

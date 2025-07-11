@@ -32,6 +32,12 @@ const BatchAnalysisView = dynamic(() => import('../../components/BatchAnalysisVi
   loading: () => <LoadingSpinner />,
 });
 
+// AI Classification Page - Fixed import
+const AIClassificationPage = dynamic(() => import('../../components/AIClassificationPage').then(mod => ({ default: mod.default })), { 
+  ssr: false, 
+  loading: () => <LoadingSpinner /> 
+});
+
 
 import { Inter, Poppins, JetBrains_Mono } from 'next/font/google';
 
@@ -589,6 +595,9 @@ export default function Home() {
                     batchSpectrograms={data?.batchSpectrograms || {}} // Pass the fetched batch data
                   />
                 </>
+              )}
+              {currentPage === 'ai-classification' && (
+                <AIClassificationPage theme={theme} />
               )}
               {/* Add other pages here based on currentPage */}
             </div>

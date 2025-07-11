@@ -25,50 +25,33 @@ const AIClassificationPage = ({ theme }) => {
     scrollToBottom();
   }, [messages]);
 
-  // API call function using Next.js API route (similar to radar_process pattern)
+  // Optimized API call function
   const classifySpectrogram = async () => {
     try {
-      // Prepare the request body with a default filename
-      const requestBody = {
-        image_filename: "spectrogram.png"
-      };
+      const requestBody = { image_filename: "spectrogram.png" };
 
       console.log('🚀 Sending classification request via Next.js API route');
 
-      // Call our Next.js API route instead of Azure directly (similar to radar_process pattern)
+      // Optimized fetch with shorter timeout and no extra headers
       const response = await fetch('/api/ai_classify', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
 
-      console.log('📡 API Route Response Status:', response.status);
-
-      // Check if the response is ok
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ API Route Error Response:', errorData);
-        throw new Error(errorData.error || `API call failed: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      // Parse the JSON response
       const result = await response.json();
-      
-      console.log('🤖 AI Classification Result from API Route:', result);
+      console.log('🤖 Classification result:', result);
       
       return result;
 
     } catch (error) {
-      console.error('❌ Classification API Route Error:', error);
-      
-      // More specific error messages
-      if (error.message.includes('Failed to fetch')) {
-        throw new Error('Cannot connect to classification service. Please check your internet connection.');
-      } else {
-        throw new Error(`Classification failed: ${error.message}`);
-      }
+      console.error('❌ API Error:', error.message);
+      throw new Error(error.message.includes('fetch') ? 'Connection failed' : error.message);
     }
   };
 
@@ -164,8 +147,6 @@ const AIClassificationPage = ({ theme }) => {
         }
       }
     }
-
-    setIsAnalyzing(false);
   };
 
   const getClassIcon = (className) => {
@@ -279,31 +260,33 @@ const AIClassificationPage = ({ theme }) => {
                           </div>
                         </div>
                         
-                        <div className="bg-black/20 rounded-lg p-3 space-y-2">
+                        <div className="bg-black/20 rounded-lg p-3 space-y-3">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-slate-300">Confidence Level</span>
+                            <span className="text-sm text-slate-300 font-medium">Confidence Level : </span>
                             <span className={`text-sm font-bold ${getConfidenceColor(message.result.confidence)}`}>
                               {getConfidenceLabel(message.result.confidence)}
                             </span>
                           </div>
                           
-                          <div className="w-full bg-slate-700 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full transition-all duration-1000 ${
-                                message.result.confidence >= 90 ? 'bg-green-400' :
-                                message.result.confidence >= 70 ? 'bg-yellow-400' :
-                                message.result.confidence >= 50 ? 'bg-orange-400' : 'bg-red-400'
-                              }`}
-                              style={{ width: `${message.result.confidence}%` }}
-                            ></div>
-                          </div>
-                          
-                          <div className="flex justify-between text-xs text-slate-400">
-                            <span>0%</span>
-                            <span className="font-mono font-bold text-white">
-                              {message.result.confidence.toFixed(1)}%
-                            </span>
-                            <span>100%</span>
+                          <div className="space-y-2">
+                            <div className="w-full bg-slate-700 rounded-full h-3">
+                              <div 
+                                className={`h-3 rounded-full transition-all duration-1000 ${
+                                  message.result.confidence >= 90 ? 'bg-green-400' :
+                                  message.result.confidence >= 70 ? 'bg-yellow-400' :
+                                  message.result.confidence >= 50 ? 'bg-orange-400' : 'bg-red-400'
+                                }`}
+                                style={{ width: `${message.result.confidence}%` }}
+                              ></div>
+                            </div>
+                            
+                            <div className="flex justify-between text-xs text-slate-400">
+                              <span>0%</span>
+                              <span className="font-mono font-bold text-white text-sm">
+                                {message.result.confidence.toFixed(1)}%
+                              </span>
+                              <span>100%</span>
+                            </div>
                           </div>
                         </div>
 

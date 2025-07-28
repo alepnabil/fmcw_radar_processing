@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Getting Started
+# IoT-Enabled FMCW Radar for Crop Intrusion Monitoring
 
-First, run the development server:
+This project presents an IoT-enabled Frequency-Modulated Continuous Wave (FMCW) radar system designed for the detection and classification of animal intrusions in agricultural crop fields. Moving beyond the limitations of traditional camera-based systems , this solution provides near real-time, interactive visualization of radar-detected animal intrusion data, featuring precise distance, velocity, and AI-driven classification of targets.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# System Architecture
+The system's architecture is illustrated below:
+![image_ult](https://github.com/alepnabil/fmcw_radar_processing/blob/0520baf734825d057825a4c8c4e1a66c44051d08/system%20architechure%20picture.png)
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Data Acquisition: FMCW Radar captures IQ Raw Data.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Data Ingestion: Raw radar data files (Raw.xrg and raw.bin) are uploaded to a Data Lake via Microsoft Azure Blob Storage.
 
-## Learn More
+AI + Signal Processing Deployment: Data is processed and classified using MATLAB Production Server hosted on Microsoft Azure Container Apps. This includes signal processing to derive distance, speed, and dominant frequencies, and AI classification through API calls.
 
-To learn more about Next.js, take a look at the following resources:
+Dashboard: Processed and classified data (.json payload) is sent to the dashboard for near real-time, interactive visualization of animal intrusion, tracking, and activity monitoring.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Branch Overview
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Branch Name | Description |
+|-------------|-------------|
+| `main` | Contains the finalized signal processing algorithms for core radar data analysis. This is the central branch where validated and production-ready processing logic is maintained. |
+| `local_dev` | Dedicated to local development and testing of the dashboard. This branch allows developers to spin up the dashboard environment locally and test its integration with MATLAB Production Server (MPS) before deploying to the cloud. |
+| `prod` | Represents the production-ready dashboard environment. It is fully integrated with the MATLAB Production Server deployed on Microsoft Azure using Azure Container Apps. This branch ensures CORS (Cross-Origin Resource Sharing) is properly configured for secure data communication between the dashboard and Azure services. |
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+# Potential Applications Beyond Intrusion Detection
+- The underlying technology has broad applicability in agricultural settings and beyond:
+
+- Crop Health Monitoring: Detecting subtle changes in plant structure or growth patterns.
+
+- Yield Estimation: Non-contact estimation of harvest volumes.
+
+- Livestock Behavior Monitoring: Analyzing detailed micro-Doppler signatures for early indicators of animal health or distress.
+
+- Wildlife Monitoring & Conservation: Unobtrusive tracking of animal movement in natural habitats.
+
+- Perimeter Security: Beyond farms, for critical infrastructure or border monitoring.

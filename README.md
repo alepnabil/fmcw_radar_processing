@@ -5,7 +5,7 @@ This project presents an IoT-enabled Frequency-Modulated Continuous Wave (FMCW) 
 
 
 # System Architecture
-The system's architecture is designed for robust data flow and scalable processing, as illustrated below:
+The system's architecture is illustrated below:
 ![image_ult](https://github.com/alepnabil/fmcw_radar_processing/blob/0520baf734825d057825a4c8c4e1a66c44051d08/system%20architechure%20picture.png)
 
 Data Acquisition: FMCW Radar captures IQ Raw Data.

@@ -1,1 +1,42 @@
-"# fmcw_radar_dashboard" 
+
+# IoT-Enabled FMCW Radar for Crop Intrusion Monitoring
+
+This project presents an IoT-enabled Frequency-Modulated Continuous Wave (FMCW) radar system designed for the detection and classification of animal intrusions in agricultural crop fields. Moving beyond the limitations of traditional camera-based systems , this solution provides near real-time, interactive visualization of radar-detected animal intrusion data, featuring precise distance, velocity, and AI-driven classification of targets.
+
+
+# System Architecture
+The system's architecture is designed for robust data flow and scalable processing, as illustrated below:
+https://github.com/alepnabil/fmcw_radar_processing/blob/main/system%20architechure%20picture.png?raw=true
+
+
+Data Acquisition: FMCW Radar captures IQ Raw Data.
+
+Data Ingestion: Raw radar data files (Raw.xrg and raw.bin) are uploaded to a Data Lake via Microsoft Azure Blob Storage.
+
+AI + Signal Processing Deployment: Data is processed and classified using MATLAB Production Server hosted on Microsoft Azure Container Apps. This includes signal processing to derive distance, speed, and dominant frequencies, and AI classification through API calls.
+
+Dashboard: Processed and classified data (.json payload) is sent to the dashboard for near real-time, interactive visualization of animal intrusion, tracking, and activity monitoring.
+
+# Branch Overview
+
+| Branch Name | Description |
+|-------------|-------------|
+| `main` | Contains the finalized signal processing algorithms for core radar data analysis. This is the central branch where validated and production-ready processing logic is maintained. |
+| `local_dev` | Dedicated to local development and testing of the dashboard. This branch allows developers to spin up the dashboard environment locally and test its integration with MATLAB Production Server (MPS) before deploying to the cloud. |
+| `prod` | Represents the production-ready dashboard environment. It is fully integrated with the MATLAB Production Server deployed on Microsoft Azure using Azure Container Apps. This branch ensures CORS (Cross-Origin Resource Sharing) is properly configured for secure data communication between the dashboard and Azure services. |
+
+
+
+
+# Potential Applications Beyond Intrusion Detection
+- The underlying technology has broad applicability in agricultural settings and beyond:
+
+- Crop Health Monitoring: Detecting subtle changes in plant structure or growth patterns.
+
+- Yield Estimation: Non-contact estimation of harvest volumes.
+
+- Livestock Behavior Monitoring: Analyzing detailed micro-Doppler signatures for early indicators of animal health or distress.
+
+- Wildlife Monitoring & Conservation: Unobtrusive tracking of animal movement in natural habitats.
+
+- Perimeter Security: Beyond farms, for critical infrastructure or border monitoring.

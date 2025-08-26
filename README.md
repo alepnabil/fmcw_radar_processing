@@ -16,6 +16,17 @@ AI + Signal Processing Deployment: Data is processed and classified using MATLAB
 
 Dashboard: Processed and classified data (.json payload) is sent to the dashboard for near real-time, interactive visualization of animal intrusion, tracking, and activity monitoring.
 
+# ETL Pipeline Files
+
+| File Name | Description |
+|-----------|-------------|
+| `radar_processing` | Main entry point for radar data ETL. Executes radar signal processing algorithms, generates outputs (JSON and images), and uploads them to Azure Blob Storage. When compiled and packaged, this program can be deployed to MATLAB Production Server and exposed via an API endpoint. |
+| `radar_processing_with_azure` | Core radar processing algorithm. Performs radar and algorithm configurations, calculates theoretical radar parameters, and iterates over each radar frame to apply fast-time processing, slow-time processing, and STFT. Outputs are saved as JSON files, including: (1) `spectrogram_data` (for spectrogram plots), (2) `range_fft` (for range FFT visualization), and (3) `range_speed` (for range-speed tracking over time). |
+| `read_data_from_blob_storage` | Retrieves radar IQ data and configuration files from Azure Blob Storage for processing. |
+| `send_json_string_to_blob_storage` | Uploads processed radar data (in JSON format) to Azure Blob Storage for downstream use by the dashboard. |
+| `send_picture_to_blob_storage` | Uploads generated spectrogram images, derived from processed IQ radar data, to Azure Blob Storage for visualization in the dashboard. |
+
+
 # Branch Overview
 
 | Branch Name | Description |

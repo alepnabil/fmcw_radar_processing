@@ -4,6 +4,11 @@
 This project presents an IoT-enabled Frequency-Modulated Continuous Wave (FMCW) radar system designed for the detection and classification of animal intrusions in agricultural crop fields. Moving beyond the limitations of traditional camera-based systems , this solution provides near real-time, interactive visualization of radar-detected animal intrusion data, featuring precise distance, velocity, and AI-driven classification of targets.
 
 
+# Main dashboard
+https://github.com/alepnabil/fmcw_radar_processing/blob/f2643d742ec461eddce6a62ad4d8221b582fec29/Main%20dashboard.png
+
+
+
 # System Architecture
 The system's architecture is illustrated below:
 ![image_ult](https://github.com/alepnabil/fmcw_radar_processing/blob/0520baf734825d057825a4c8c4e1a66c44051d08/system%20architechure%20picture.png)

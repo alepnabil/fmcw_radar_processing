@@ -5,7 +5,7 @@ This project presents an IoT-enabled Frequency-Modulated Continuous Wave (FMCW) 
 
 
 # Main dashboard
-https://github.com/alepnabil/fmcw_radar_processing/blob/f2643d742ec461eddce6a62ad4d8221b582fec29/Main%20dashboard.png
+![image_ult](https://github.com/alepnabil/fmcw_radar_processing/blob/f2643d742ec461eddce6a62ad4d8221b582fec29/Main%20dashboard.png)
 
 
 

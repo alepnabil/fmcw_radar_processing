@@ -31,6 +31,12 @@ Dashboard: Processed and classified data (.json payload) is sent to the dashboar
 | `send_json_string_to_blob_storage` | Uploads processed radar data (in JSON format) to Azure Blob Storage for downstream use by the dashboard. |
 | `send_picture_to_blob_storage` | Uploads generated spectrogram images, derived from processed IQ radar data, to Azure Blob Storage for visualization in the dashboard. |
 
+# Backend results
+## Azure VMSS monitoring
+https://github.com/alepnabil/fmcw_radar_processing/blob/32072d9b47c95974250b7b2c5f8e4c80986fcab7/Monitoring%20VMSS%20after%20processing%20main%20dashboard.png
+## Azure container apps monitoring
+https://github.com/alepnabil/fmcw_radar_processing/blob/32072d9b47c95974250b7b2c5f8e4c80986fcab7/Container%20log%20stream%20after%20classification%20human.png
+
 
 # Branch Overview
 
